@@ -14,9 +14,6 @@ from sklearn.cross_validation import train_test_split
 
 CATEGORICAL_COLUMNS = ["Child", "Sex", "Cab", "NameT", "AgeKnown", "Embarked", "Young", "Family", "MaleBadTicket"]
 CONTINUOUS_COLUMNS = ["Age", "Fare", "Pclass", "NameLength"]
-
-SURVIVED_COLUMN = "Survived"
-
 tf.logging.set_verbosity(tf.logging.ERROR)
 
 def build_estimator(model_dir, classifier):
@@ -54,12 +51,10 @@ def build_estimator(model_dir, classifier):
 						     ])
   age_buckets = tf.contrib.layers.bucketized_column(age,
                                                     boundaries=[
-                                                        5, 18, 25, 30, 35, 40,
-                                                        45, 50, 55, 65
+                                                        5, 18, 25, 30, 35, 40, 45, 50, 55, 65
                                                     ])
   pclass_buckets = tf.contrib.layers.bucketized_column(p_class,
-                                                    boundaries=[
-						        1, 2, 3])
+                                                    boundaries=[1, 2, 3])
 
    # Wide columns and deep columns.
   wide_columns = [sex, cab, namet, child, ageknown, embarked, young, family,
@@ -81,6 +76,9 @@ def build_estimator(model_dir, classifier):
 
 
   deep_columns = [
+      namelength,
+      fare,
+      p_class,
       tf.contrib.layers.embedding_column(sex, dimension=8),
       tf.contrib.layers.embedding_column(child, dimension=8),
       tf.contrib.layers.embedding_column(family, dimension=8),
@@ -89,26 +87,24 @@ def build_estimator(model_dir, classifier):
       tf.contrib.layers.embedding_column(ageknown, dimension=8),
       tf.contrib.layers.embedding_column(embarked, dimension=8),
       tf.contrib.layers.embedding_column(young, dimension=8),
-      tf.contrib.layers.embedding_column(malebadticket, dimension=8),
-      namelength,
-      fare,
-      p_class
+      tf.contrib.layers.embedding_column(malebadticket, dimension=8)
   ]
 
-  if classifier == "wide":
-    return Learn.LinearClassifier(
-            feature_columns=wide_columns,           
-            optimizer=tf.train.FtrlOptimizer(           
-                    learning_rate=5,                   
-                    l1_regularization_strength=1000.0,                   
-                    l2_regularization_strength=1000.0),      
-          	    model_dir=model_dir)
-  elif classifier == "deep":
+  if classifier == "deep":
     return Learn.DNNClassifier(model_dir=model_dir,
-                                       feature_columns=deep_columns,
-                                       hidden_units=[32, 16],
-				       optimizer=tf.train.ProximalAdagradOptimizer(
-				                       learning_rate=0.1, l2_regularization_strength=0.001))
+                               feature_columns=deep_columns,
+                               hidden_units=[32, 16],
+                               optimizer=tf.train.ProximalAdagradOptimizer(
+                               learning_rate=0.1,
+                               l2_regularization_strength=0.001))
+  elif classifier == "wide":
+    return Learn.LinearClassifier(
+            feature_columns=wide_columns,
+            optimizer=tf.train.FtrlOptimizer(
+                    learning_rate=5,
+                    l1_regularization_strength=1000.0,
+                    l2_regularization_strength=1000.0),
+                    model_dir=model_dir)
   else:
     return Learn.DNNLinearCombinedClassifier(
             linear_feature_columns=wide_columns,
@@ -120,7 +116,8 @@ def build_estimator(model_dir, classifier):
 				l1_regularization_strength=100.0,
 				l2_regularization_strength=100.0),
             dnn_optimizer=tf.train.ProximalAdagradOptimizer(
-	                            learning_rate=0.1, l2_regularization_strength=0.001))
+	                            learning_rate=0.1,
+                                    l2_regularization_strength=0.001))
 
 def input_fn(df, y, train=False):
 
